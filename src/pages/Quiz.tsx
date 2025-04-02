@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/auth/AuthContext';
 import { ClockIcon, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
+import { Progress } from '@/components/ui/progress';
 
 // Mock data for a single quiz
 const mockQuiz = {
@@ -55,7 +57,7 @@ const Quiz = () => {
   const { quizId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { toast } = useToast();
+  const { toast: uiToast } = useToast();
   
   // In a real app, we would fetch the quiz data based on quizId
   const quiz = mockQuiz;
@@ -66,6 +68,26 @@ const Quiz = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   const currentQuestion = quiz.questions[currentQuestionIndex];
+  const timePercentage = (timeLeft / (quiz.timeLimit * 60)) * 100;
+
+  // Effect for the countdown timer
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prevTime) => {
+        if (prevTime <= 1) {
+          clearInterval(timer);
+          // Auto-submit when time runs out
+          toast.warning("Time's up! Submitting quiz...");
+          handleSubmit();
+          return 0;
+        }
+        return prevTime - 1;
+      });
+    }, 1000);
+
+    // Cleanup the timer when component unmounts
+    return () => clearInterval(timer);
+  }, []);
 
   // Format time as mm:ss
   const formatTime = (seconds: number) => {
@@ -109,7 +131,7 @@ const Quiz = () => {
     // In a real app, we would submit this to an API
     setTimeout(() => {
       setIsSubmitting(false);
-      toast({
+      uiToast({
         title: "Quiz submitted successfully",
         description: `Your score: ${score}%`,
       });
@@ -129,14 +151,18 @@ const Quiz = () => {
         <p className="text-gray-600">{quiz.description}</p>
       </div>
       
-      <div className="mb-4 flex justify-between items-center">
-        <div className="text-sm">
-          Question {currentQuestionIndex + 1} of {quiz.questions.length}
+      <div className="mb-4">
+        <div className="flex justify-between items-center mb-2">
+          <div className="text-sm">
+            Question {currentQuestionIndex + 1} of {quiz.questions.length}
+          </div>
+          <div className="flex items-center gap-2 text-amber-600 font-medium">
+            <ClockIcon className="h-4 w-4" />
+            <span>{formatTime(timeLeft)}</span>
+          </div>
         </div>
-        <div className="flex items-center gap-2 text-amber-600 font-medium">
-          <ClockIcon className="h-4 w-4" />
-          <span>{formatTime(timeLeft)}</span>
-        </div>
+        
+        <Progress value={timePercentage} className={`h-2 ${timePercentage < 20 ? 'bg-red-200' : 'bg-blue-200'}`} />
       </div>
       
       <Card className="mb-6">
@@ -201,6 +227,24 @@ const Quiz = () => {
         >
           Exit Quiz
         </Button>
+      </div>
+
+      {/* Question navigation */}
+      <div className="mt-6">
+        <h3 className="text-sm font-medium mb-2">Question Navigator</h3>
+        <div className="flex flex-wrap gap-2">
+          {quiz.questions.map((q, idx) => (
+            <Button
+              key={q.id}
+              variant={answers[q.id] ? "default" : "outline"}
+              size="sm"
+              className={`w-10 h-10 ${currentQuestionIndex === idx ? 'ring-2 ring-primary' : ''}`}
+              onClick={() => setCurrentQuestionIndex(idx)}
+            >
+              {idx + 1}
+            </Button>
+          ))}
+        </div>
       </div>
     </DashboardLayout>
   );
