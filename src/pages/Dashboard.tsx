@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { DashboardLayout } from '@/components/layout/DashboardLayout';
+import { DashboardLayout } from '@/components/dashboard/DashboardLayout';
 import { useAuth } from '@/components/auth/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { QuizGrid } from '@/components/quiz/QuizGrid';
